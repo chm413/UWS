@@ -1,0 +1,8 @@
+name: UwbpSpigotBridge
+main: com.uws.bridge.spigot.SpigotBridgePlugin
+version: 1.0.0
+api-version: 1.20
+author: UnifiedWorldSync
+load: POSTWORLD
+description: U-WBP v2 bridge plugin for Spigot servers.
+depend: []

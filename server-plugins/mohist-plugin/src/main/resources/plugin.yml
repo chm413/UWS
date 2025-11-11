@@ -1,0 +1,7 @@
+name: UwbpMohistBridge
+main: com.uws.bridge.mohist.MohistBridgePlugin
+version: 1.0.0
+author: UnifiedWorldSync
+load: POSTWORLD
+description: U-WBP v2 bridge plugin for Mohist hybrid servers.
+depend: []
