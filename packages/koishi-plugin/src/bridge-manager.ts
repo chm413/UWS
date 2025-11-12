@@ -132,6 +132,9 @@ export class BridgeConnection extends EventEmitter {
           version: envelope.data.version ?? this.server.version,
         })
       }
+      if (envelope.cmd === 'pong') {
+        this.scheduleHeartbeat()
+      }
       return
     }
 
@@ -145,10 +148,6 @@ export class BridgeConnection extends EventEmitter {
         this.onLiveStatus(this.server.id, status)
       }
       this.onPush(this.server.id, envelope)
-    }
-
-    if (envelope.cmd === 'pong') {
-      this.scheduleHeartbeat()
     }
   }
 
