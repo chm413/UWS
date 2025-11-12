@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "uwbpfabricbridge",
+  "version": "1.0.0",
+  "name": "U-WBP Fabric Bridge",
+  "description": "Fabric-side implementation of the Unified Websocket Bridge Protocol.",
+  "authors": ["Unified World Sync"],
+  "license": "MIT",
+  "environment": "server",
+  "entrypoints": {
+    "server": ["com.uws.bridge.fabric.FabricBridgeMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric": "*"
+  }
+}
