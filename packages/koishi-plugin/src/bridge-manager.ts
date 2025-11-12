@@ -1,6 +1,6 @@
 import WebSocket from 'ws'
 import { Context, Logger } from 'koishi'
-import { EventEmitter } from 'events'
+import { EventEmitter } from 'node:events'
 import { v4 as uuidv4 } from 'uuid'
 import { BridgeCommandEnvelope, LiveStatus, MinecraftServer, PluginConfig } from './types'
 import { now } from './utils'
@@ -132,9 +132,6 @@ export class BridgeConnection extends EventEmitter {
           version: envelope.data.version ?? this.server.version,
         })
       }
-      if (envelope.cmd === 'pong') {
-        this.scheduleHeartbeat()
-      }
       return
     }
 
@@ -148,6 +145,10 @@ export class BridgeConnection extends EventEmitter {
         this.onLiveStatus(this.server.id, status)
       }
       this.onPush(this.server.id, envelope)
+    }
+
+    if (envelope.cmd === 'pong') {
+      this.scheduleHeartbeat()
     }
   }
 
