@@ -1,4 +1,4 @@
-import { createServer, Server } from 'node:http'
+import { createServer, Server } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { BridgeConfig } from './config'
 import { createConnector } from './connectors'

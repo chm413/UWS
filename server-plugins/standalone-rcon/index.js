@@ -1,10 +1,10 @@
 import { WebSocketServer } from 'ws'
 import { Rcon } from 'rcon-client'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import os from 'node:os'
-import crypto from 'node:crypto'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import os from 'os'
+import crypto from 'crypto'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
