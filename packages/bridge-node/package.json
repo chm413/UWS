@@ -1,0 +1,22 @@
+{
+  "name": "@uws/bridge-node",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@types/node": "^20.12.7",
+    "ws": "^8.17.0",
+    "yaml": "^2.4.1",
+    "eventemitter3": "^5.0.1",
+    "rcon-client": "^4.2.5"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

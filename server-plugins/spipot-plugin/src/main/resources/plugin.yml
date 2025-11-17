@@ -1,0 +1,8 @@
+name: UwbpSpipotBridge
+main: com.uws.bridge.spipot.SpipotBridgePlugin
+version: 1.0.0
+api-version: 1.20
+author: UnifiedWorldSync
+load: POSTWORLD
+description: U-WBP v2 bridge plugin for Spipot servers.
+depend: []
