@@ -2,13 +2,15 @@ import { Context, Logger } from 'koishi'
 import { AdminServer } from './admin-server'
 import { AuditService } from './audit'
 import { BridgeManager } from './bridge-manager'
-import { Config as ConfigSchema, PluginConfig } from './types'
+import { Config } from './types'
 
 export const name = 'uws-koishi-plugin'
-export const Config = ConfigSchema
+export { Config }
+export const inject = ['database']
+
 const logger = new Logger('uws.plugin')
 
-export function apply(ctx: Context, config: PluginConfig) {
+export function apply(ctx: Context, config: Config) {
   ctx.model.extend(
     'minecraft_servers',
     {
@@ -29,7 +31,7 @@ export function apply(ctx: Context, config: PluginConfig) {
       reportMode: 'string',
       lastCapsAt: 'timestamp',
     },
-    { autoInc: true },
+    { primary: 'id', autoInc: true },
   )
 
   ctx.model.extend(
@@ -43,7 +45,7 @@ export function apply(ctx: Context, config: PluginConfig) {
       createdAt: 'timestamp',
       updatedAt: 'timestamp',
     },
-    { autoInc: true },
+    { primary: 'id', autoInc: true },
   )
 
   ctx.model.extend(
@@ -61,7 +63,7 @@ export function apply(ctx: Context, config: PluginConfig) {
       createdAt: 'timestamp',
       createdBy: 'string',
     },
-    { autoInc: true },
+    { primary: 'id', autoInc: true },
   )
 
   ctx.model.extend(
@@ -80,7 +82,7 @@ export function apply(ctx: Context, config: PluginConfig) {
       ip: 'string',
       ua: 'string',
     },
-    { autoInc: true },
+    { primary: 'id', autoInc: true },
   )
 
   const audit = new AuditService(ctx)

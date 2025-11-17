@@ -67,7 +67,8 @@ export type AuditLogInput =
   Omit<AuditLog, 'id' | 'ts' | 'requestId' | 'ip' | 'ua'> &
   Partial<Pick<AuditLog, 'ts' | 'requestId' | 'ip' | 'ua'>>
 
-export interface PluginConfig {
+
+export interface Config {
   adminPort: number
   tokenPrefix: string
   commandWhitelist: string[]
@@ -78,7 +79,8 @@ export interface PluginConfig {
   requestTimeoutMs: number
 }
 
-export const Config: Schema<PluginConfig> = Schema.object({
+
+export const Config: Schema<Config> = Schema.object({
   adminPort: Schema.number().default(6251).description('Port for management API.'),
   tokenPrefix: Schema.string().default('pat_').description('Prefix for issued API tokens.'),
   commandWhitelist: Schema.array(Schema.string()).default([

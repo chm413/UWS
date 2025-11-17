@@ -18,6 +18,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+
+import me.clip.placeholderapi.PlaceholderAPI;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.model.group.Group;
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.Node;
+import net.luckperms.api.node.NodeType;
+import net.luckperms.api.node.types.InheritanceNode;
+import net.luckperms.api.util.Tristate;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
+
 import org.bukkit.BanEntry;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
@@ -32,6 +45,8 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.RegisteredServiceProvider;
+
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -39,6 +54,9 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
   private BridgeServer bridgeServer;
   private BukkitTask metricsTask;
   private final Set<String> subscribedTopics = ConcurrentHashMap.newKeySet();
+  private boolean placeholderApiAvailable;
+  private LuckPerms luckPerms;
+  private Economy economy;
 
   @Override
   public void onEnable() {
@@ -54,6 +72,8 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
+
+    initializeOptionalIntegrations();
     startMetricsTask();
   }
 
@@ -69,6 +89,9 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
         getLogger().log(Level.WARNING, "Error shutting down bridge server", ex);
       }
     }
+    placeholderApiAvailable = false;
+    luckPerms = null;
+    economy = null;
   }
 
   protected abstract String getCoreName();
@@ -87,6 +110,24 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
 
   protected BridgeServer getBridgeServer() {
     return bridgeServer;
+  }
+
+  private void initializeOptionalIntegrations() {
+    placeholderApiAvailable = getServer().getPluginManager().isPluginEnabled("PlaceholderAPI");
+
+    if (getServer().getPluginManager().isPluginEnabled("LuckPerms")) {
+      try {
+        luckPerms = LuckPermsProvider.get();
+      } catch (IllegalStateException ex) {
+        getLogger().log(Level.WARNING, "LuckPerms detected but provider unavailable", ex);
+        luckPerms = null;
+      }
+    } else {
+      luckPerms = null;
+    }
+
+    RegisteredServiceProvider<Economy> provider = getServer().getServicesManager().getRegistration(Economy.class);
+    economy = provider != null ? provider.getProvider() : null;
   }
 
   private void startMetricsTask() {
@@ -121,6 +162,29 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
         return supplySync(() -> handleConsoleExec(request.getData()));
       case "subscribe":
         return CompletableFuture.completedFuture(handleSubscribe(request.getData()));
+      case "ext.papi.resolve":
+        return supplySync(() -> handlePlaceholderResolve(request.getData()));
+      case "ext.lp.getGroups":
+        return handleLuckPermsGetGroups();
+      case "ext.lp.getPlayerGroups":
+        return handleLuckPermsGetPlayerGroups(request.getData());
+      case "ext.lp.setPrimaryGroup":
+        return handleLuckPermsSetPrimaryGroup(request.getData());
+      case "ext.lp.addPermission":
+        return handleLuckPermsModifyPermission(request.getData(), true);
+      case "ext.lp.removePermission":
+        return handleLuckPermsModifyPermission(request.getData(), false);
+      case "ext.lp.check":
+        return handleLuckPermsCheckPermission(request.getData());
+      case "ext.vault.getBalance":
+        return supplySync(() -> handleVaultBalance(request.getData()));
+      case "ext.vault.deposit":
+        return supplySync(() -> handleVaultDeposit(request.getData()));
+      case "ext.vault.withdraw":
+        return supplySync(() -> handleVaultWithdraw(request.getData()));
+      case "ext.vault.transfer":
+        return supplySync(() -> handleVaultTransfer(request.getData()));
+
       default:
         return CompletableFuture.completedFuture(BridgeResponse.failure("unsupported command"));
     }
@@ -259,7 +323,8 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
     String player = params.get("player").getAsString();
     BanList banList = Bukkit.getBanList(BanList.Type.NAME);
     if (value) {
-      BanEntry entry = banList.addBan(player, params.has("reason") ? params.get("reason").getAsString() : "Banned via bridge", null, null);
+      String reason = params.has("reason") ? params.get("reason").getAsString() : "Banned via bridge";
+      BanEntry entry = banList.addBan(player, reason, (java.util.Date) null, null);
       JsonObject data = new JsonObject();
       data.addProperty("until", entry != null && entry.getExpiration() != null ? entry.getExpiration().toInstant().toEpochMilli() : 0);
       return BridgeResponse.success(data);
@@ -269,7 +334,7 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
     }
   }
 
-  private BridgeResponse buildCapabilitiesPayload() {
+  private JsonObject buildCapabilitiesPayload() {
     JsonObject data = new JsonObject();
     JsonArray caps = new JsonArray();
     Set<String> baseCaps = new HashSet<>();
@@ -287,6 +352,23 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
     baseCaps.add("events.player");
     baseCaps.add("events.chat");
     baseCaps.add("events.metrics");
+    if (placeholderApiAvailable) {
+      baseCaps.add("ext.papi.resolve");
+    }
+    if (luckPerms != null) {
+      baseCaps.add("ext.lp.getGroups");
+      baseCaps.add("ext.lp.getPlayerGroups");
+      baseCaps.add("ext.lp.setPrimaryGroup");
+      baseCaps.add("ext.lp.addPermission");
+      baseCaps.add("ext.lp.removePermission");
+      baseCaps.add("ext.lp.check");
+    }
+    if (economy != null) {
+      baseCaps.add("ext.vault.getBalance");
+      baseCaps.add("ext.vault.deposit");
+      baseCaps.add("ext.vault.withdraw");
+      baseCaps.add("ext.vault.transfer");
+    }
     baseCaps.addAll(getExtraCapabilities());
     baseCaps.forEach(caps::add);
     data.add("caps", caps);
@@ -407,6 +489,271 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
     data.addProperty("uuid", player.getUniqueId().toString());
     data.addProperty("message", message);
     broadcast("events.chat", data);
+  }
+
+  private BridgeResponse handlePlaceholderResolve(JsonObject payload) {
+    if (!placeholderApiAvailable) {
+      return BridgeResponse.failure("PlaceholderAPI not available");
+    }
+    if (payload == null || !payload.has("placeholders") || !payload.get("placeholders").isJsonArray()) {
+      return BridgeResponse.failure("missing placeholders");
+    }
+    OfflinePlayer context = null;
+    if (payload.has("player") && !payload.get("player").getAsString().isEmpty()) {
+      context = Bukkit.getOfflinePlayer(payload.get("player").getAsString());
+    }
+    JsonObject results = new JsonObject();
+    OfflinePlayer finalContext = context;
+    payload.getAsJsonArray("placeholders").forEach(element -> {
+      String placeholder = element.getAsString();
+      String resolved = PlaceholderAPI.setPlaceholders(finalContext, placeholder);
+      results.addProperty(placeholder, resolved);
+    });
+    JsonObject data = new JsonObject();
+    data.add("results", results);
+    return BridgeResponse.success(data);
+  }
+
+  private CompletableFuture<BridgeResponse> handleLuckPermsGetGroups() {
+    if (luckPerms == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("LuckPerms not available"));
+    }
+    JsonObject data = new JsonObject();
+    JsonArray groups = new JsonArray();
+    for (Group group : luckPerms.getGroupManager().getLoadedGroups()) {
+      JsonObject entry = new JsonObject();
+      entry.addProperty("name", group.getName());
+      group.getWeight().ifPresent(weight -> entry.addProperty("weight", weight));
+      String friendly = group.getFriendlyName();
+      entry.addProperty("displayName", friendly != null ? friendly : group.getName());
+      groups.add(entry);
+    }
+    data.add("groups", groups);
+    return CompletableFuture.completedFuture(BridgeResponse.success(data));
+  }
+
+  private CompletableFuture<BridgeResponse> handleLuckPermsGetPlayerGroups(JsonObject payload) {
+    if (luckPerms == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("LuckPerms not available"));
+    }
+    return resolveLuckPermsUser(payload)
+        .thenApply(user -> {
+          try {
+            JsonArray groups = new JsonArray();
+            for (InheritanceNode node : user.getNodes(NodeType.INHERITANCE)) {
+              JsonObject entry = new JsonObject();
+              entry.addProperty("group", node.getGroupName());
+              entry.addProperty("value", node.getValue());
+              groups.add(entry);
+            }
+            JsonObject data = new JsonObject();
+            data.add("groups", groups);
+            return BridgeResponse.success(data);
+          } finally {
+            releaseLuckPermsUser(user);
+          }
+        })
+        .exceptionally(throwable -> handleLuckPermsException("getPlayerGroups", throwable));
+  }
+
+  private CompletableFuture<BridgeResponse> handleLuckPermsSetPrimaryGroup(JsonObject payload) {
+    if (luckPerms == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("LuckPerms not available"));
+    }
+    String group = payload != null && payload.has("group") ? payload.get("group").getAsString() : null;
+    UUID uuid = resolvePlayerUuid(payload);
+    if (group == null || group.isEmpty() || uuid == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("missing group or player"));
+    }
+    return luckPerms.getGroupManager().loadGroup(group)
+        .thenCompose(loaded -> {
+          if (loaded == null) {
+            return CompletableFuture.completedFuture(BridgeResponse.failure("group not found"));
+          }
+          return luckPerms.getUserManager()
+              .modifyUser(uuid, user -> user.setPrimaryGroup(group))
+              .thenApply(unused -> BridgeResponse.success(null));
+        })
+        .exceptionally(throwable -> handleLuckPermsException("setPrimaryGroup", throwable));
+  }
+
+  private CompletableFuture<BridgeResponse> handleLuckPermsModifyPermission(JsonObject payload, boolean add) {
+    if (luckPerms == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("LuckPerms not available"));
+    }
+    String permission = payload != null && payload.has("permission") ? payload.get("permission").getAsString() : null;
+    UUID uuid = resolvePlayerUuid(payload);
+    if (permission == null || permission.isEmpty() || uuid == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("missing permission or player"));
+    }
+    boolean value = !payload.has("value") || payload.get("value").getAsBoolean();
+    return luckPerms.getUserManager()
+        .modifyUser(uuid, user -> {
+          if (add) {
+            Node node = Node.builder(permission).value(value).build();
+            user.data().add(node);
+          } else {
+            user.data().remove(Node.builder(permission).value(true).build());
+            user.data().remove(Node.builder(permission).value(false).build());
+          }
+        })
+        .thenApply(unused -> BridgeResponse.success(null))
+        .exceptionally(throwable -> handleLuckPermsException(add ? "addPermission" : "removePermission", throwable));
+  }
+
+  private CompletableFuture<BridgeResponse> handleLuckPermsCheckPermission(JsonObject payload) {
+    if (luckPerms == null) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("LuckPerms not available"));
+    }
+    String permission = payload != null && payload.has("permission") ? payload.get("permission").getAsString() : null;
+    if (permission == null || permission.isEmpty()) {
+      return CompletableFuture.completedFuture(BridgeResponse.failure("missing permission"));
+    }
+    return resolveLuckPermsUser(payload)
+        .thenApply(user -> {
+          try {
+            Tristate result = user.getCachedData().getPermissionData().checkPermission(permission);
+            JsonObject data = new JsonObject();
+            data.addProperty("result", result.asBoolean());
+            data.addProperty("state", result.name().toLowerCase());
+            return BridgeResponse.success(data);
+          } finally {
+            releaseLuckPermsUser(user);
+          }
+        })
+        .exceptionally(throwable -> handleLuckPermsException("checkPermission", throwable));
+  }
+
+  private CompletableFuture<User> resolveLuckPermsUser(JsonObject payload) {
+    UUID uuid = resolvePlayerUuid(payload);
+    if (uuid == null) {
+      return CompletableFuture.failedFuture(new IllegalArgumentException("missing player identifier"));
+    }
+    return luckPerms.getUserManager().loadUser(uuid);
+  }
+
+  private void releaseLuckPermsUser(User user) {
+    if (luckPerms == null || user == null) {
+      return;
+    }
+    luckPerms.getUserManager().saveUser(user);
+    luckPerms.getUserManager().cleanupUser(user);
+  }
+
+  private BridgeResponse handleLuckPermsException(String action, Throwable throwable) {
+    Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
+    getLogger().log(Level.WARNING, "LuckPerms action " + action + " failed", cause);
+    String message = cause.getMessage() != null ? cause.getMessage() : "LuckPerms error";
+    return BridgeResponse.error(message);
+  }
+
+  private UUID resolvePlayerUuid(JsonObject payload) {
+    if (payload == null) {
+      return null;
+    }
+    if (payload.has("uuid") && !payload.get("uuid").getAsString().isEmpty()) {
+      try {
+        return UUID.fromString(payload.get("uuid").getAsString());
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    if (payload.has("player") && !payload.get("player").getAsString().isEmpty()) {
+      OfflinePlayer offline = Bukkit.getOfflinePlayer(payload.get("player").getAsString());
+      return offline.getUniqueId();
+    }
+    return null;
+  }
+
+  private BridgeResponse handleVaultBalance(JsonObject payload) {
+    if (economy == null) {
+      return BridgeResponse.failure("Vault economy not available");
+    }
+    OfflinePlayer player = resolveOfflinePlayer(payload, "player");
+    if (player == null) {
+      return BridgeResponse.failure("missing player");
+    }
+    JsonObject data = new JsonObject();
+    data.addProperty("balance", economy.getBalance(player));
+    return BridgeResponse.success(data);
+  }
+
+  private BridgeResponse handleVaultDeposit(JsonObject payload) {
+    if (economy == null) {
+      return BridgeResponse.failure("Vault economy not available");
+    }
+    OfflinePlayer player = resolveOfflinePlayer(payload, "player");
+    double amount = payload != null && payload.has("amount") ? payload.get("amount").getAsDouble() : 0.0;
+    if (player == null || amount <= 0) {
+      return BridgeResponse.failure("missing player or amount");
+    }
+    EconomyResponse response = economy.depositPlayer(player, amount);
+    if (!response.transactionSuccess()) {
+      return BridgeResponse.failure(response.errorMessage);
+    }
+    JsonObject data = new JsonObject();
+    data.addProperty("balance", economy.getBalance(player));
+    return BridgeResponse.success(data);
+  }
+
+  private BridgeResponse handleVaultWithdraw(JsonObject payload) {
+    if (economy == null) {
+      return BridgeResponse.failure("Vault economy not available");
+    }
+    OfflinePlayer player = resolveOfflinePlayer(payload, "player");
+    double amount = payload != null && payload.has("amount") ? payload.get("amount").getAsDouble() : 0.0;
+    if (player == null || amount <= 0) {
+      return BridgeResponse.failure("missing player or amount");
+    }
+    EconomyResponse response = economy.withdrawPlayer(player, amount);
+    if (!response.transactionSuccess()) {
+      return BridgeResponse.failure(response.errorMessage);
+    }
+    JsonObject data = new JsonObject();
+    data.addProperty("balance", economy.getBalance(player));
+    return BridgeResponse.success(data);
+  }
+
+  private BridgeResponse handleVaultTransfer(JsonObject payload) {
+    if (economy == null) {
+      return BridgeResponse.failure("Vault economy not available");
+    }
+    OfflinePlayer source = resolveOfflinePlayer(payload, "from");
+    OfflinePlayer target = resolveOfflinePlayer(payload, "to");
+    double amount = payload != null && payload.has("amount") ? payload.get("amount").getAsDouble() : 0.0;
+    if (source == null || target == null || amount <= 0) {
+      return BridgeResponse.failure("missing transfer parameters");
+    }
+    EconomyResponse withdraw = economy.withdrawPlayer(source, amount);
+    if (!withdraw.transactionSuccess()) {
+      return BridgeResponse.failure(withdraw.errorMessage);
+    }
+    EconomyResponse deposit = economy.depositPlayer(target, amount);
+    if (!deposit.transactionSuccess()) {
+      economy.depositPlayer(source, amount);
+      return BridgeResponse.failure(deposit.errorMessage);
+    }
+    JsonObject data = new JsonObject();
+    data.addProperty("fromBalance", economy.getBalance(source));
+    data.addProperty("toBalance", economy.getBalance(target));
+    return BridgeResponse.success(data);
+  }
+
+  private OfflinePlayer resolveOfflinePlayer(JsonObject payload, String key) {
+    if (payload == null) {
+      return null;
+    }
+    String uuidKey = key + "Uuid";
+    if (payload.has(uuidKey) && !payload.get(uuidKey).getAsString().isEmpty()) {
+      try {
+        UUID uuid = UUID.fromString(payload.get(uuidKey).getAsString());
+        return Bukkit.getOfflinePlayer(uuid);
+      } catch (IllegalArgumentException ignored) {
+      }
+    }
+    if (payload.has(key) && !payload.get(key).getAsString().isEmpty()) {
+      return Bukkit.getOfflinePlayer(payload.get(key).getAsString());
+    }
+    return null;
   }
 
   @EventHandler

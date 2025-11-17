@@ -75,7 +75,7 @@ Once loaded, the plugin automatically boots the admin API and starts connecting 
 
 The Node-based bridge provides adapters for the following environments. Each adapter conforms to the U-WBP command set and emits capability metadata according to the spec.
 
-* **Java RCON connector** – covers Paper, Folia, Spigot, Bukkit, Mohist, Forge, NeoForge, Fabric. It uses RCON to execute commands and gather list/tps data.
+* **Java RCON connector** – covers Paper, Folia, Spigot, Spipot, Bukkit, Mohist, Forge, NeoForge, and Fabric. It uses RCON to execute commands, manage whitelist/blacklist/kick/broadcast controls, and gather list/tps data (including Forge `forge tps`).
 * **Bedrock connector** – targets LiteLoaderBDS (LLBDS) and other Bedrock cores with RCON.
 * **Standalone RCON** – generic connector for any RCON-compatible server or proxy.
 * **Shell hook connector** – integrates arbitrary deployments by executing shell scripts for status, players, and control operations.

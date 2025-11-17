@@ -13,6 +13,8 @@ export interface ConnectorCapabilities {
 export interface PlayersResult {
   count: number
   players: any[]
+  maxPlayers?: number
+  raw?: string
 }
 
 export interface UsageResult {

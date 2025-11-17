@@ -25,3 +25,6 @@ TestResults.xml
 node_modules/
 **/dist/
 *.tsbuildinfo
+# Gradle build artefacts
+.gradle/
+**/build/

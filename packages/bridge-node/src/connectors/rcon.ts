@@ -34,8 +34,17 @@ export class StandaloneRconConnector extends BaseConnector {
 
   async getPlayers(): Promise<PlayersResult> {
     const output = await this.rcon.send('list')
-    return { count: 0, players: output.split(',').map((name) => ({ name: name.trim() })).filter((p) => p.name) }
-  }
+    const [, listPart] = output.split(':')
+    const rawNames = listPart ? listPart.trim() : ''
+    const names = rawNames
+      .split(',')
+      .map((entry: string) => entry.trim())
+      .filter((entry: string): entry is string => entry.length > 0)
+    return {
+      count: names.length,
+      players: names.map((playerName: string) => ({ name: playerName })),
+      raw: output,
+    }
 
   async getUsage(): Promise<UsageResult> {
     return {}

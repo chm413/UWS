@@ -141,7 +141,7 @@ public class NeoForgeBridgeMod implements BridgeRequestHandler {
     return future;
   }
 
-  private BridgeResponse buildCapabilities() {
+  private JsonObject buildCapabilities() {
     JsonObject data = new JsonObject();
     JsonArray caps = new JsonArray();
     caps.add("core.info");

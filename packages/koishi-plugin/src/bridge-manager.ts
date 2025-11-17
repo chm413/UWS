@@ -30,7 +30,7 @@ export class BridgeConnection extends EventEmitter {
   constructor(
     private ctx: Context,
     private server: MinecraftServer,
-    private config: PluginConfig,
+    private config: Config,
     private onLiveStatus: (serverId: number, status: LiveStatus) => void,
     private onPush: (serverId: number, payload: BridgeCommandEnvelope) => void,
   ) {
@@ -190,7 +190,7 @@ export class BridgeManager extends EventEmitter {
   private connections = new Map<number, BridgeConnection>()
   private liveStatus = new Map<number, LiveStatus>()
 
-  constructor(private ctx: Context, private config: PluginConfig) {
+  constructor(private ctx: Context, private config: Config) {
     super()
   }
 

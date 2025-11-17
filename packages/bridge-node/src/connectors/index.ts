@@ -1,6 +1,7 @@
 import { BridgeConfig } from '../config'
 import { BaseConnector } from './base'
-import { JavaRconConnector } from './java'
+import { createJavaConnector } from './java'
+import type { JavaVariantType } from './java'
 import { BedrockConnector } from './bedrock'
 import { StandaloneRconConnector } from './rcon'
 import { ShellHookConnector } from './shell'
@@ -14,7 +15,7 @@ export function createConnector(config: BridgeConfig): BaseConnector {
     case 'forge':
     case 'neoforge':
     case 'fabric':
-      return new JavaRconConnector(config)
+      return createJavaConnector(config.server.type as JavaVariantType, config)
     case 'llbds':
       return new BedrockConnector(config)
     case 'standalone-rcon':

@@ -10,5 +10,7 @@ include(
   "mohist-plugin",
   "forge-mod",
   "neoforge-mod",
+  "fabric-mod",
+  "stubs"
   "fabric-mod"
 )
