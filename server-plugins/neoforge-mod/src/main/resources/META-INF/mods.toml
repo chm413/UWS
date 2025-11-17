@@ -1,0 +1,19 @@
+modLoader="javafml"
+loaderVersion="[1, )"
+license="MIT"
+
+[[mods]]
+modId="uwbpneoforgebridge"
+version="1.0.0"
+displayName="U-WBP NeoForge Bridge"
+description='''
+NeoForge-side implementation of the Unified Websocket Bridge Protocol.
+'''
+credits="Unified World Sync"
+
+[[dependencies.uwbpneoforgebridge]]
+modId="neoforge"
+mandatory=true
+versionRange="[20.2,)"
+ordering="NONE"
+side="BOTH"

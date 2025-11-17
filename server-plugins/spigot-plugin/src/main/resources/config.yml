@@ -1,0 +1,7 @@
+bridge:
+  bindAddress: 0.0.0.0
+  port: 6250
+  token: change-me
+  serverId: spigot-main
+  version: ${minecraft.version}
+  heartbeatSeconds: 30
