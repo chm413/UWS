@@ -1,0 +1,19 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="uwbpforgebridge"
+version="1.0.0"
+displayName="U-WBP Forge Bridge"
+description='''
+Forge-side implementation of the Unified Websocket Bridge Protocol.
+'''
+credits="Unified World Sync"
+
+[[dependencies.uwbpforgebridge]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"

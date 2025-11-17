@@ -1,0 +1,14 @@
+listen:
+  host: 0.0.0.0
+  port: 6250
+  token: bridge_secret
+server:
+  type: paper
+  name: Survival-Folia
+  core: Folia
+  version: 1.21.8
+  style: Java
+rcon:
+  host: localhost
+  port: 25575
+  password: secret
