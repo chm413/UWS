@@ -1,6 +1,6 @@
-import http from 'http'
-import Koa, { Next, ParameterizedContext } from 'koa'
-import Router, { RouterContext } from 'koa-router'
+import http from 'node:http'
+import Koa from 'koa'
+import Router from 'koa-router'
 import cors from '@koa/cors'
 import bodyParser from 'koa-bodyparser'
 import { Context, Logger } from 'koishi'
@@ -11,7 +11,7 @@ import {
   AuthorizationContext,
   ConsoleRequest,
   MinecraftServer,
-  Config,
+  PluginConfig,
   PlayerPage,
   Scope,
 } from './types'
@@ -39,6 +39,7 @@ interface SseClient {
   scopes: Set<Scope>
 }
 
+
 type AppContext = ParameterizedContext<KoaState, Router.IRouterParamContext<KoaState>>
 type AdminRouterContext = RouterContext<KoaState>
 
@@ -60,9 +61,9 @@ function mapEventToTopic(cmd: string) {
 }
 
 export class AdminServer {
-  private app: Koa<KoaState>
+  private app: Koa<any, KoaState>
   private server?: http.Server
-  private router: Router<KoaState>
+  private router: Router<any, KoaState>
   private clients = new Map<string, SseClient>()
   private heartbeat?: NodeJS.Timeout
 
@@ -74,6 +75,10 @@ export class AdminServer {
   ) {
     this.app = new Koa<KoaState>()
     this.router = new Router<KoaState>({ prefix: '/v1' })
+    private config: PluginConfig,
+  ) {
+    this.app = new Koa<any, KoaState>()
+    this.router = new Router<any, KoaState>({ prefix: '/v1' })
     this.setup()
   }
 
@@ -86,6 +91,7 @@ export class AdminServer {
       koaCtx.set('x-request-id', requestId)
       try {
         await next()
+
       } catch (err) {
         const error = err instanceof Error ? err : new Error('internal_error')
         logger.warn(error)
@@ -142,6 +148,7 @@ export class AdminServer {
       koaCtx.body = { data, error: null }
     })
 
+
     this.router.get('/servers/:id/status', async (koaCtx: AdminRouterContext) => {
       const serverId = Number(koaCtx.params.id)
       const { auth } = koaCtx.state
@@ -151,6 +158,7 @@ export class AdminServer {
       const status = this.bridge.getCombinedStatus(server)
       koaCtx.body = { data: status, error: null }
     })
+
 
     this.router.get('/servers/:id/players', async (koaCtx: AdminRouterContext) => {
       const serverId = Number(koaCtx.params.id)
@@ -214,7 +222,9 @@ export class AdminServer {
       koaCtx.body = { data: result, error: null }
     })
 
+
     this.router.post('/tokens', async (koaCtx: AdminRouterContext) => {
+
       const { auth } = koaCtx.state
       ensureScope(auth, 'tokens:issue')
       const payload = koaCtx.request.body as Partial<ApiToken>
@@ -265,6 +275,7 @@ export class AdminServer {
       )
       koaCtx.body = { data: true, error: null }
     })
+
 
     this.router.get('/audit', async (koaCtx: AdminRouterContext) => {
       const { auth } = koaCtx.state
@@ -340,7 +351,9 @@ export class AdminServer {
     }
   }
 
-  private async lookupToken(rawToken: string, koaCtx: AppContext) {
+
+  private async lookupToken(rawToken: string, koaCtx: Koa.ParameterizedContext<any, KoaState>) {
+
     const hash = hashToken(rawToken)
     const [record] = await this.ctx.database.get('api_tokens', { tokenHash: hash })
     if (!record || record.revoked || tokenExpired(record)) return null

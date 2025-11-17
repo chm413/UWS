@@ -67,6 +67,7 @@ export type AuditLogInput =
   Omit<AuditLog, 'id' | 'ts' | 'requestId' | 'ip' | 'ua'> &
   Partial<Pick<AuditLog, 'ts' | 'requestId' | 'ip' | 'ua'>>
 
+
 export interface Config {
   adminPort: number
   tokenPrefix: string
@@ -77,6 +78,7 @@ export interface Config {
   readonlyConcurrency: number
   requestTimeoutMs: number
 }
+
 
 export const Config: Schema<Config> = Schema.object({
   adminPort: Schema.number().default(6251).description('Port for management API.'),

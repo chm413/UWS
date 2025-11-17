@@ -1,11 +1,8 @@
-import { BridgeConfig } from '../config'
-import { BaseConnector, ConnectorCapabilities, ControlResult, PlayersResult, UsageResult } from './base'
-import { RconClient } from '../utils/rcon'
-
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 export type JavaVariantType =
   | 'paper'
   | 'spigot'
-  | 'spipot'
   | 'bukkit'
   | 'mohist'
   | 'forge'
@@ -171,6 +168,18 @@ function extractMspt(output: string): number | undefined {
   const tick = output.match(/Tick(?: time)?[:=]\s*([0-9.]+)/i)
   if (tick) return Number(tick[1])
   return undefined
+const execAsync = promisify(exec)
+
+function parseList(output: string) {
+  const match = output.match(/There are (\d+) of a max of (\d+) players online: (.*)/i)
+  if (!match) return { count: 0, players: [] }
+  const count = Number(match[1])
+  const players = match[3]
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((name) => ({ name }))
+  return { count, players }
 }
 
 export class JavaRconConnector extends BaseConnector {
@@ -192,83 +201,41 @@ export class JavaRconConnector extends BaseConnector {
 
   async init(): Promise<void> {}
 
-  protected getCapabilitiesList() {
-    return Array.from(new Set([...BASE_CAPABILITIES, ...(this.variant.extraCaps ?? [])]))
-  }
-
   async getCapabilities(): Promise<ConnectorCapabilities> {
     return {
-      caps: this.getCapabilitiesList(),
+      caps: [
+        'core.info',
+        'players.list',
+        'metrics.tps',
+        'control.runCommand',
+        'control.setWeather',
+        'control.setTime',
+        'events.chat',
+        'console.exec',
+      ],
       limits: { 'rate.qps': 20, 'timeout.ms': 5000, maxBatch: 50 },
     }
   }
 
-  private async fetchVersion(): Promise<string | undefined> {
-    try {
-      const output = await this.rcon.send('version')
-      const match = output.match(/running\s+([\w .()\-]+?)(?:\s+\(.*\))?$/i)
-      if (match) return match[1].trim()
-      return output.trim()
-    } catch (err) {
-      return undefined
-    }
-  }
-
-  private async fetchPlugins(): Promise<{ name: string }[]> {
-    if (!this.variant.pluginsCommand) return []
-    try {
-      const output = await this.rcon.send(this.variant.pluginsCommand)
-      return parsePlugins(output)
-    } catch (err) {
-      return []
-    }
-  }
 
   async getServerInfo(): Promise<any> {
-    const [players, plugins, version] = await Promise.all([
-      this.getPlayers(),
-      this.fetchPlugins(),
-      this.fetchVersion(),
-    ])
-
+    const motd = await this.rcon.send('motd')
+    const list = await this.getPlayers()
     return {
       name: this.name,
       style: this.style,
       core: this.core,
       version: version ?? this.version,
-      maxPlayers: players.maxPlayers,
       onlinePlayers: players.count,
       plugins,
       reportMode: this.variant.reportMode,
+      description: motd?.trim(),
+      maxPlayers: list.count,
+      onlinePlayers: list.count,
     }
   }
 
   async getPlayers(): Promise<PlayersResult> {
-    try {
-      const output = await this.rcon.send('list')
-      return parseList(output)
-    } catch (err) {
-      return { count: 0, players: [] }
-    }
-  }
-
-  async getUsage(): Promise<UsageResult> {
-    const command = this.variant.metricsCommand ?? 'tps'
-    try {
-      const output = await this.rcon.send(command)
-      return {
-        tps: extractTps(output),
-        tickTime: extractMspt(output),
-        raw: output,
-      }
-    } catch (err) {
-      return {}
-    }
-  }
-
-  async control(action: string, params?: Record<string, any>): Promise<ControlResult> {
-    switch (action) {
-      case 'setWeather': {
         const weather = params?.weather ?? 'clear'
         await this.rcon.send(`weather ${weather}`)
         return { status: 'success', msg: `Weather set to ${weather}` }
@@ -352,3 +319,4 @@ export function createJavaConnector(type: JavaVariantType, config: BridgeConfig)
 }
 
 export { JAVA_VARIANT_METADATA }
+

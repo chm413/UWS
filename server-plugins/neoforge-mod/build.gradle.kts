@@ -10,5 +10,6 @@ java {
 
 dependencies {
   implementation(project(":common"))
-  compileOnly(project(":stubs"))
+
+  compileOnly("net.neoforged:neoforge:20.2.86:server")
 }
