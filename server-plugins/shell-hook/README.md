@@ -50,3 +50,4 @@ variables before invoking it:
 The handler's stdout is relayed back to Koishi as the response message.
 If the handler variable is empty, the bridge responds with `unsupported`
 for control commands.
+
