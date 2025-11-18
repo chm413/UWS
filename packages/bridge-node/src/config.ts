@@ -1,7 +1,6 @@
 export type ServerType =
   | 'paper'
   | 'spigot'
-  | 'spipot'
   | 'bukkit'
   | 'mohist'
   | 'forge'

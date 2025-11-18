@@ -1,6 +1,6 @@
-import http from 'http'
-import Koa, { Next, ParameterizedContext } from 'koa'
-import Router, { RouterContext } from 'koa-router'
+import http from 'node:http'
+import Koa from 'koa'
+import Router from 'koa-router'
 import cors from '@koa/cors'
 import bodyParser from 'koa-bodyparser'
 import { Context, Logger } from 'koishi'
@@ -11,7 +11,7 @@ import {
   AuthorizationContext,
   ConsoleRequest,
   MinecraftServer,
-  Config,
+  PluginConfig,
   PlayerPage,
   Scope,
 } from './types'
@@ -38,6 +38,7 @@ interface SseClient {
   topics: Set<string>
   scopes: Set<Scope>
 }
+
 
 type AppContext = ParameterizedContext<KoaState, Router.IRouterParamContext<KoaState>>
 type AdminRouterContext = RouterContext<KoaState>

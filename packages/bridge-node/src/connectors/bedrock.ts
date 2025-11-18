@@ -1,5 +1,5 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
 import { BridgeConfig } from '../config'
 import { BaseConnector, ConnectorCapabilities, ControlResult, PlayersResult, UsageResult } from './base'
 import { RconClient } from '../utils/rcon'

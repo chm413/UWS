@@ -10,7 +10,6 @@ export function createConnector(config: BridgeConfig): BaseConnector {
   switch (config.server.type) {
     case 'paper':
     case 'spigot':
-    case 'spipot':
     case 'bukkit':
     case 'mohist':
     case 'forge':

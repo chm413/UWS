@@ -12,11 +12,9 @@
     "koa": "^2.14.2",
     "koa-bodyparser": "^4.4.0",
     "koa-router": "^12.0.0",
+    "koishi": "^4.16.0",
     "uuid": "^9.0.1",
     "ws": "^8.17.0"
-  },
-  "peerDependencies": {
-    "koishi": "^4.16.0"
   },
   "devDependencies": {
     "@types/koa": "^2.13.8",
