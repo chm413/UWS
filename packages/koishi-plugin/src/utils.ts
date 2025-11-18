@@ -1,4 +1,4 @@
-import crypto from 'node:crypto'
+import crypto from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
 import { ApiToken, AuthorizationContext, RequestContext, Scope } from './types'
 

@@ -12,5 +12,4 @@ include(
   "neoforge-mod",
   "fabric-mod",
   "stubs"
-  "fabric-mod"
 )

@@ -1,8 +1,8 @@
 import WebSocket from 'ws'
 import { Context, Logger } from 'koishi'
-import { EventEmitter } from 'node:events'
+import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import { BridgeCommandEnvelope, LiveStatus, MinecraftServer, PluginConfig } from './types'
+import { BridgeCommandEnvelope, Config, LiveStatus, MinecraftServer } from './types'
 import { now } from './utils'
 
 interface PendingRequest<T = any> {

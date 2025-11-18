@@ -18,7 +18,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.logging.Level;
-
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -30,7 +29,6 @@ import net.luckperms.api.node.types.InheritanceNode;
 import net.luckperms.api.util.Tristate;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
-
 import org.bukkit.BanEntry;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
@@ -46,7 +44,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.RegisteredServiceProvider;
-
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -72,7 +69,6 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
       getServer().getPluginManager().disablePlugin(this);
       return;
     }
-
     initializeOptionalIntegrations();
     startMetricsTask();
   }
@@ -184,7 +180,6 @@ public abstract class AbstractBukkitBridgePlugin extends JavaPlugin implements L
         return supplySync(() -> handleVaultWithdraw(request.getData()));
       case "ext.vault.transfer":
         return supplySync(() -> handleVaultTransfer(request.getData()));
-
       default:
         return CompletableFuture.completedFuture(BridgeResponse.failure("unsupported command"));
     }

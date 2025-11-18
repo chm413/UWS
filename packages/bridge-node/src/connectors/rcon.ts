@@ -45,6 +45,7 @@ export class StandaloneRconConnector extends BaseConnector {
       players: names.map((playerName: string) => ({ name: playerName })),
       raw: output,
     }
+  }
 
   async getUsage(): Promise<UsageResult> {
     return {}

@@ -64,4 +64,3 @@ The first build may take several minutes as dependencies are downloaded.
 > resolution. If that occurs you must either mirror the repository internally or
 > provide a local Maven proxy that exposes the required artifacts before the
 > build can succeed.
-

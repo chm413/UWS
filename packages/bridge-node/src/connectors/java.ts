@@ -217,6 +217,34 @@ export class JavaRconConnector extends BaseConnector {
     }
   }
 
+  private async fetchVersion(): Promise<string | undefined> {
+    try {
+      const output = await this.rcon.send('version')
+      const match = output.match(/running\s+([\w .()\-]+?)(?:\s+\(.*\))?$/i)
+      if (match) return match[1].trim()
+      return output.trim()
+    } catch (err) {
+      return undefined
+    }
+  }
+
+  private async fetchPlugins(): Promise<{ name: string }[]> {
+    if (!this.variant.pluginsCommand) return []
+    try {
+      const output = await this.rcon.send(this.variant.pluginsCommand)
+      return parsePlugins(output)
+    } catch (err) {
+      return []
+    }
+  }
+
+  async getServerInfo(): Promise<any> {
+    const [players, plugins, version] = await Promise.all([
+      this.getPlayers(),
+      this.fetchPlugins(),
+      this.fetchVersion(),
+    ])
+
 
   async getServerInfo(): Promise<any> {
     const motd = await this.rcon.send('motd')
@@ -226,16 +254,39 @@ export class JavaRconConnector extends BaseConnector {
       style: this.style,
       core: this.core,
       version: version ?? this.version,
+      maxPlayers: players.maxPlayers,
       onlinePlayers: players.count,
       plugins,
       reportMode: this.variant.reportMode,
-      description: motd?.trim(),
-      maxPlayers: list.count,
-      onlinePlayers: list.count,
     }
   }
 
   async getPlayers(): Promise<PlayersResult> {
+    try {
+      const output = await this.rcon.send('list')
+      return parseList(output)
+    } catch (err) {
+      return { count: 0, players: [] }
+    }
+  }
+
+  async getUsage(): Promise<UsageResult> {
+    const command = this.variant.metricsCommand ?? 'tps'
+    try {
+      const output = await this.rcon.send(command)
+      return {
+        tps: extractTps(output),
+        tickTime: extractMspt(output),
+        raw: output,
+      }
+    } catch (err) {
+      return {}
+    }
+  }
+
+  async control(action: string, params?: Record<string, any>): Promise<ControlResult> {
+    switch (action) {
+      case 'setWeather': {
         const weather = params?.weather ?? 'clear'
         await this.rcon.send(`weather ${weather}`)
         return { status: 'success', msg: `Weather set to ${weather}` }
