@@ -2,6 +2,11 @@
   "name": "uws-monorepo",
   "private": true,
   "version": "1.0.0",
+  "scripts": {
+    "build": "npm run --workspaces build",
+    "test": "npm run build",
+    "lint": "npm run build"
+  },
   "workspaces": [
     "packages/*"
   ]

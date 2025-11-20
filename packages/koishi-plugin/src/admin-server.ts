@@ -1,6 +1,6 @@
 import http from 'node:http'
-import Koa from 'koa'
-import Router from 'koa-router'
+import Koa, { ParameterizedContext, Next } from 'koa'
+import Router, { RouterContext } from 'koa-router'
 import cors from '@koa/cors'
 import bodyParser from 'koa-bodyparser'
 import { Context, Logger } from 'koishi'
@@ -11,7 +11,7 @@ import {
   AuthorizationContext,
   ConsoleRequest,
   MinecraftServer,
-  PluginConfig,
+  Config,
   PlayerPage,
   Scope,
 } from './types'
