@@ -5,7 +5,8 @@
   "scripts": {
     "build": "npm run --workspaces build",
     "test": "npm run build",
-    "lint": "npm run build"
+    "lint": "npm run build",
+    "koishi:check": "npx koishi -V"
   },
   "workspaces": [
     "packages/*"
