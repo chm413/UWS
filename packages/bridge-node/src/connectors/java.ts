@@ -1,5 +1,9 @@
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
+import { BridgeConfig } from '../config'
+import { BaseConnector, ConnectorCapabilities, ControlResult, PlayersResult, UsageResult } from './base'
+import { RconClient } from '../utils/rcon'
+
 export type JavaVariantType =
   | 'paper'
   | 'spigot'
@@ -28,12 +32,6 @@ const JAVA_VARIANT_METADATA: Record<JavaVariantType, JavaVariantOptions> = {
     extraCaps: ['metrics.mspt'],
   },
   spigot: {
-    core: 'Spigot',
-    reportMode: 'mixed',
-    metricsCommand: 'tps',
-    pluginsCommand: 'plugins',
-  },
-  spipot: {
     core: 'Spigot',
     reportMode: 'mixed',
     metricsCommand: 'tps',
@@ -168,19 +166,9 @@ function extractMspt(output: string): number | undefined {
   const tick = output.match(/Tick(?: time)?[:=]\s*([0-9.]+)/i)
   if (tick) return Number(tick[1])
   return undefined
-const execAsync = promisify(exec)
-
-function parseList(output: string) {
-  const match = output.match(/There are (\d+) of a max of (\d+) players online: (.*)/i)
-  if (!match) return { count: 0, players: [] }
-  const count = Number(match[1])
-  const players = match[3]
-    .split(',')
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((name) => ({ name }))
-  return { count, players }
 }
+
+const execAsync = promisify(exec)
 
 export class JavaRconConnector extends BaseConnector {
   readonly style: 'Java' = 'Java'
@@ -203,16 +191,7 @@ export class JavaRconConnector extends BaseConnector {
 
   async getCapabilities(): Promise<ConnectorCapabilities> {
     return {
-      caps: [
-        'core.info',
-        'players.list',
-        'metrics.tps',
-        'control.runCommand',
-        'control.setWeather',
-        'control.setTime',
-        'events.chat',
-        'console.exec',
-      ],
+      caps: [...BASE_CAPABILITIES, ...(this.variant.extraCaps ?? [])],
       limits: { 'rate.qps': 20, 'timeout.ms': 5000, maxBatch: 50 },
     }
   }
@@ -245,10 +224,6 @@ export class JavaRconConnector extends BaseConnector {
       this.fetchVersion(),
     ])
 
-
-  async getServerInfo(): Promise<any> {
-    const motd = await this.rcon.send('motd')
-    const list = await this.getPlayers()
     return {
       name: this.name,
       style: this.style,
@@ -370,4 +345,3 @@ export function createJavaConnector(type: JavaVariantType, config: BridgeConfig)
 }
 
 export { JAVA_VARIANT_METADATA }
-
