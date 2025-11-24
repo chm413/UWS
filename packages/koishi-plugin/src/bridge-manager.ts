@@ -112,6 +112,10 @@ export class BridgeConnection extends EventEmitter {
   }
 
   private dispatchEnvelope(envelope: BridgeCommandEnvelope) {
+    const shouldScheduleHeartbeat =
+      envelope.cmd === 'pong' ||
+      (envelope.cmd === 'auth' && envelope.mode === 'response' && (!envelope.status || envelope.status === 'success'))
+
     if (envelope.mode === 'response' && envelope.requestId) {
       const pending = this.pending.get(envelope.requestId)
       if (pending) {
@@ -123,6 +127,7 @@ export class BridgeConnection extends EventEmitter {
           pending.reject(new Error(envelope.msg || envelope.status))
         }
       }
+      if (shouldScheduleHeartbeat) this.scheduleHeartbeat()
       if (envelope.cmd === 'getCapabilities' && Array.isArray(envelope.data?.caps)) {
         this.features = envelope.data.caps
         this.ctx.database.set('minecraft_servers', this.server.id, {
@@ -135,6 +140,8 @@ export class BridgeConnection extends EventEmitter {
       return
     }
 
+    if (shouldScheduleHeartbeat) this.scheduleHeartbeat()
+
     if (envelope.mode === 'push') {
       if (envelope.cmd === 'metrics.tps' || envelope.cmd.startsWith('metrics')) {
         const status: LiveStatus = {
@@ -145,10 +152,6 @@ export class BridgeConnection extends EventEmitter {
         this.onLiveStatus(this.server.id, status)
       }
       this.onPush(this.server.id, envelope)
-    }
-
-    if (envelope.cmd === 'pong') {
-      this.scheduleHeartbeat()
     }
   }
 
