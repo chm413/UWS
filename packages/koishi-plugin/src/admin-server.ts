@@ -37,6 +37,7 @@ interface SseClient {
   res: http.ServerResponse
   topics: Set<string>
   scopes: Set<Scope>
+  serverFilter?: Set<number>
 }
 
 type AppContext = ParameterizedContext<KoaState, Router.IRouterParamContext<KoaState>>
@@ -299,6 +300,7 @@ export class AdminServer {
         res,
         topics,
         scopes: auth!.scopes,
+        serverFilter: auth?.serverFilter,
       }
       this.clients.set(clientId, client)
       res.write(': connected\n\n')
@@ -331,6 +333,8 @@ export class AdminServer {
   private broadcast(topic: string, payload: any) {
     for (const client of this.clients.values()) {
       if (!client.topics.has(topic)) continue
+      const serverId = typeof payload?.serverId === 'number' ? payload.serverId : undefined
+      if (client.serverFilter && serverId !== undefined && !client.serverFilter.has(serverId)) continue
       if (client.res.writableEnded) {
         this.clients.delete(client.id)
         continue
